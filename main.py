@@ -1,22 +1,22 @@
 from flask import Flask, request
-import os
 
 app = Flask(__name__)
-VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN') 
-PAGE_ACCESS_TOKEN = os.environ.get('PAGE_ACCESS_TOKEN')
 
-@app.route('/webhook', methods=['GET']) # << ეს უკვე გაქვს
+# დროებით პირდაპირ ჩაწერე რომ პრობლემა არ იყოს
+VERIFY_TOKEN = "mysecret123" 
+
+@app.route('/webhook', methods=['GET'])
 def verify():
-    token = request.args.get('hub.verify_token')
-    challenge = request.args.get('hub.challenge')
+    token = request.args.get("hub.verify_token")
+    challenge = request.args.get("hub.challenge")
     if token == VERIFY_TOKEN:
         return challenge
-    return 'Error: Wrong token', 403
+    return "Wrong token", 403
 
-@app.route('/webhook', methods=['POST']) # <<<< ეს დაუმატე ბოლოში
+@app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.get_json()
-    print("Facebook sent:", data)
+    print("Message received:", data)
     return "ok", 200
 
 if __name__ == '__main__':
