@@ -6,7 +6,6 @@ app = Flask(__name__)
 PAGE_ACCESS_TOKEN = os.environ.get('PAGE_ACCESS_TOKEN')
 VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN')
 
-#!!! აქ შენი ლინკები ჩასვი!!!
 GROUP_LINK = "https://www.facebook.com/groups/yourgroup"
 WEBSITE_LINK = "https://yourwebsite.ge"
 
@@ -32,6 +31,14 @@ def send_button_template(sender_id, text, buttons):
     }
     send_message(sender_id, payload)
 
+def send_language_menu(sender_id):
+    buttons = [
+        {"type": "postback", "title": "🇬🇪 ქართული", "payload": "LANG_ka"},
+        {"type": "postback", "title": "🇺🇸 English", "payload": "LANG_en"},
+        {"type": "postback", "title": "🇷🇺 Русский", "payload": "LANG_ru"}
+    ]
+    send_button_template(sender_id, "გამარჯობა! 👋\nაირჩიეთ ენა / Choose language / Выберите язык", buttons)
+
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     if request.method == 'GET':
@@ -47,16 +54,9 @@ def webhook():
             if 'postback' in messaging_event:
                 payload = messaging_event['postback']['payload']
 
-                # 1. START ღილაკზე - ენები
                 if payload == "START" or payload == "GET_STARTED":
-                    buttons = [
-                        {"type": "postback", "title": "🇬🇪 ქართული", "payload": "LANG_ka"},
-                        {"type": "postback", "title": "🇺🇸 English", "payload": "LANG_en"},
-                        {"type": "postback", "title": "🇷🇺 Русский", "payload": "LANG_ru"}
-                    ]
-                    send_button_template(sender_id, "აირჩიეთ ენა / Choose language / Выберите язык", buttons)
+                    send_language_menu(sender_id) # Get Started-ზე
 
-                # 2. ენის არჩევისას - მენიუ
                 elif payload.startswith("LANG_"):
                     lang = payload.split("_")[1]
                     user_lang[sender_id] = lang
@@ -72,34 +72,10 @@ def webhook():
                     ]
                     send_button_template(sender_id, menu_text, buttons)
 
-                # 3. ყიდვაზე - ქალაქები
-                elif payload == "BUY":
-                    lang = user_lang.get(sender_id, "ka")
-                    city_text = "აირჩიეთ ქალაქი:" if lang=="ka" else "Choose city:" if lang=="en" else "Выберите город:"
-                    buttons = [
-                        {"type": "postback", "title": "თბილისი", "payload": "CITY_თბილისი"},
-                        {"type": "postback", "title": "ბათუმი", "payload": "CITY_ბათუმი"},
-                        {"type": "postback", "title": "ქუთაისი", "payload": "CITY_ქუთაისი"}
-                    ]
-                    send_button_template(sender_id, city_text, buttons)
-
-                # 4. ქალაქის არჩევისას
-                elif payload.startswith("CITY_"):
-                    lang = user_lang.get(sender_id, "ka")
-                    city = payload.split("_")[1]
-                    warning = "⚠️ ყურადღება: ყველა განცხადება მხოლოდ ქართულად არის" if lang=="ka" else "⚠️ Attention: All listings are only in Georgian" if lang=="en" else "⚠️ Внимание: Все объявления только на грузинском"
-                    send_text(sender_id, warning)
-                    send_text(sender_id, f"{city}-ში განცხადებები: \n1. 2 ოთ. ბინა - 120,000$\n2. 3 ოთ. ბინა - 150,000$")
-
             elif 'message' in messaging_event:
-                text = messaging_event['message']['text'].lower()
-                if "გამარჯობა" in text or "hello" in text or "привет" in text or "start" in text:
-                    buttons = [
-                        {"type": "postback", "title": "🇬🇪 ქართული", "payload": "LANG_ka"},
-                        {"type": "postback", "title": "🇺🇸 English", "payload": "LANG_en"},
-                        {"type": "postback", "title": "🇷🇺 Русский", "payload": "LANG_ru"}
-                    ]
-                    send_button_template(sender_id, "აირჩიეთ ენა / Choose language / Выберите язык", buttons)
+                text = messaging_event['message'].get('text', '').lower()
+                # ვინც შემოვა და რამე დაწერს - პირდაპირ მივაწოდოთ მენიუ
+                send_language_menu(sender_id)
 
     return "ok", 200
 
