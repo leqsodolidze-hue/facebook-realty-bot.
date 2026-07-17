@@ -6,8 +6,7 @@ app = Flask(__name__)
 PAGE_ACCESS_TOKEN = os.environ.get('PAGE_ACCESS_TOKEN')
 VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN')
 
-# შენი ლინკები
-GROUP_LINK = "https://www.facebook.com/groups/yourgroup"
+GROUP_LINK = "https://www.facebook.com/groups/yourgroup" # აქ შენი ჯგუფის ლინკი ჩასვი
 WEBSITE_LINK = "https://yourwebsite.ge"
 
 CITIES = ["თბილისი", "ბათუმი", "ქუთაისი", "რუსთავი", "ზუგდიდი"]
@@ -41,14 +40,14 @@ def handle_message(sender_id, message_text):
             {"type": "postback", "title": "🏠 ყიდვა", "payload": "BUY"},
             {"type": "postback", "title": "🔑 ქირა", "payload": "RENT"},
             {"type": "postback", "title": "💰 გირავნობა", "payload": "MORTGAGE"},
-            {"type": "postback", "title": "📢 გაყიდვა", "payload": "SELL"}
+            {"type": "postback", "title": "📢 გაყიდვა", "payload": "SELL"} # კონტაქტის მაგივრად გაყიდვა
         ]
         send_buttons(sender_id, "გამარჯობა! რით შემიძლია დაგეხმაროთ?", buttons)
     else:
         send_text(sender_id, "მენიუსთვის დაწერეთ START")
 
 def handle_postback(sender_id, payload):
-    if payload == "START" or payload == "GET_STARTED": # დავამატე GET_STARTED-იც
+    if payload == "START" or payload == "GET_STARTED":
         handle_message(sender_id, "start")
     elif payload == "BUY":
         buttons = [{"type": "postback", "title": city, "payload": f"CITY_BUY_{city}"} for city in CITIES]
@@ -58,12 +57,12 @@ def handle_postback(sender_id, payload):
     elif payload == "MORTGAGE":
         send_text(sender_id, "გირავნობის განყოფილება მალე დაემატება")
     elif payload == "SELL":
-        send_buttons(sender_id, "გაყიდვისთვის მოგვწერეთ ჯგუფში:", [{"type": "web_url", "url": GROUP_LINK, "title": "ჩვენი ჯგუფი"}])
+        send_buttons(sender_id, "გაყიდვისთვის მოგვწერეთ ჩვენს ჯგუფში:", [{"type": "web_url", "url": GROUP_LINK, "title": "ჩვენი ჯგუფი"}]) # აქ ჯგუფში გადაგზავნის
     elif payload.startswith("CITY_BUY_"):
         city = payload.replace("CITY_BUY_", "")
         if city in LISTINGS:
             for item in LISTINGS[city]:
-                send_text(sender_id, f"{item['title']}\nფასი: {item['price']}\n{item['link']}") # აქ ვასწორებ
+                send_text(sender_id, f"{item['title']}\nფასი: {item['price']}\n{item['link']}")
         else:
             send_text(sender_id, "ამ ქალაქში ამჟამად განცხადებები არ არის")
 
@@ -83,9 +82,6 @@ def webhook():
                 if 'postback' in event:
                     handle_postback(sender_id, event['postback']['payload'])
         return 'ok', 200
-
-# ეს ხაზი წავშალე აქედან: setup_get_started()
-# Get Started-ს ხელით ჩავრთავთ Graph Explorer-ით
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
