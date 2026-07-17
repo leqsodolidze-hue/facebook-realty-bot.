@@ -1,106 +1,122 @@
-print("BOT VERSION 3.1 LOADED")
-
-from flask import Flask, request
-import requests
 import os
+import requests
+from flask import Flask, request
 
 app = Flask(__name__)
 
-PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
-VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN")
+PAGE_ACCESS_TOKEN = os.environ.get('PAGE_ACCESS_TOKEN')
+VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN')
 
-GROUP_LINK = "https://www.facebook.com/groups/2319025648223860"
-PAGE_LINK = "https://www.facebook.com/profile.php?id=61591712523869"
+# შენი ლინკები - აქ ჩასვი შენი რეალური
+GROUP_LINK = "https://www.facebook.com/groups/yourgroup" 
+WEBSITE_LINK = "https://yourwebsite.ge"
 
-def send_message(recipient_id, text, quick_replies=None):
-    payload = {
-        "recipient": {"id": recipient_id},
-        "message": {"text": text}
-    }
-    if quick_replies:
-        payload["message"]["quick_replies"] = []
-        for qr in quick_replies:
-            payload["message"]["quick_replies"].append({
-                "content_type": "text",
-                "title": qr["title"],
-                "payload": qr["payload"]
-            })
-    url = f"https://graph.facebook.com/v19.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
-    requests.post(url, json=payload)
+# რეალური ბინები
+LISTINGS = {
+  "თბილისი": {
+    "ყიდვა": [
+      f"1. 2 ოთახიანი ბინა, ვაკე - $120,000\nფართი: 65მ²\n[დეტალურად]({WEBSITE_LINK})",
+      f"2. 3 ოთახიანი ბინა, საბურთალო - $180,000\nფართი: 90მ²\n[დეტალურად]({WEBSITE_LINK})"
+    ],
+    "ქირა": ["1. 2 ოთახიანი ბინა, ვაკე - $800/თვე"]
+  },
+  "ბათუმი": {
+    "ყიდვა": [f"1. 1 ოთახიანი, ზღვისპირა - $90,000\n[დეტალურად]({WEBSITE_LINK})"],
+    "ქირა": ["1. 1 ოთახიანი, ზღვა 5 წთ - $600/თვე"]
+  },
+  "ქუთაისი": {
+    "ყიდვა": ["1. 3 ოთახიანი ბინა, ცენტრი - $65,000"],
+    "ქირა": ["1. 2 ოთახიანი ბინა - $300/თვე"]
+  }
+}
 
-def handle_message(sender_id, message_text):
-    text = message_text.lower().strip()
-    print(f"Received: {text}") # ესაც დავამატეთ რომ ლოგში ვნახოთ რა მოდის
+user_state = {}
 
-    if any(word in text for word in ["გამარჯობა", "hi", "start", "მთავარი"]):
-        send_message(sender_id,
-            "გამარჯობა! 👋 \nკეთილი იყოს თქვენი მობრძანება უძრავი ქონების ოფისში!\n\nრით შემიძლია დაგეხმაროთ?",
-            quick_replies=[
-                {"title": "🏠 ყიდვა", "payload": "BUY"},
-                {"title": "🔑 ქირა", "payload": "RENT"},
-                {"title": "💰 გირავნობა", "payload": "MORTGAGE"},
-                {"title": "📢 გაყიდვა", "payload": "SELL"}
-            ]
-        )
+@app.route('/webhook', methods=['GET'])
+def verify():
+    if request.args.get("hub.verify_token") == VERIFY_TOKEN:
+        return request.args.get("hub.challenge")
+    return "Error"
 
-    elif text in ["buy", "rent", "mortgage", "sell"]:
-        action = {"buy": "ყიდვა", "rent": "ქირა", "mortgage": "გირავნობა", "sell": "გაყიდვა"}[text]
-        send_message(sender_id,
-            f"შესანიშნავი! თქვენ აირჩიეთ: {action}\n\nახლა აირჩიეთ რეგიონი:",
-            quick_replies=[
-                {"title": "თბილისი", "payload": f"{text.upper()}_TBILISI"},
-                {"title": "ბათუმი", "payload": f"{text.upper()}_BATUMI"},
-                {"title": "ქუთაისი", "payload": f"{text.upper()}_KUTAISI"},
-                {"title": "სხვა", "payload": f"{text.upper()}_OTHER"}
-            ]
-        )
-
-    elif "_TBILISI" in text or "_BATUMI" in text or "_KUTAISI" in text or "_OTHER" in text:
-        parts = text.split("_")
-        action = parts[0]
-        city = "თბილისი" if "TBILISI" in text else "ბათუმი" if "BATUMI" in text else "ქუთაისი" if "KUTAISI" in text else "სხვა რეგიონი"
-
-        if action == "BUY":
-            msg = f"{city}-ში იყიდება ამჟამად 🏠\n\n1. 2 ოთახიანი ბინა, ვაკე - 120,000$\n2. 3 ოთახიანი ბინა, საბურთალო - 150,000$\n3. სახლი, დიდუბე - 220,000$\n\nდამატებითი ვარიანტებისთვის ეწვიეთ ჩვენს ჯგუფს:\n{GROUP_LINK}"
-        elif action == "RENT":
-            msg = f"{city}-ში ქირავდება 🔑\n\n1. 1 ოთახიანი, ვაკე - 500$/თვე\n2. 2 ოთახიანი, საბურთალო - 700$/თვე\n3. სტუდიო, ცენტრი - 400$/თვე\n\nსხვა ვარიანტები: {GROUP_LINK}"
-        elif action == "MORTGAGE":
-            msg = f"გირავნობის შეთავაზებები {city}-ში 💰\n\nჩვენ გვაქვს საუკეთესო პირობები.\nდეტალები და განაცხადი: {GROUP_LINK}\n\nჩვენი მენეჯერი დაგიკავშირდებათ"
-        elif action == "SELL":
-            msg = f"დაგვეხმარებით გაყიდვაში {city}-ში! 📢\n\nატვირთეთ თქვენი ქონება ჩვენს ჯგუფში:\n{GROUP_LINK}\n\nან მოგვწერეთ დეტალები აქვე"
-
-        msg += f"\n\nდამატებითი ინფორმაციისთვის ეწვიეთ ჩვენს გვერდს:\n{PAGE_LINK}"
-
-        send_message(sender_id, msg, quick_replies=[{"title": "🔙 მთავარი მენიუ", "payload": "START"}])
-
-    else:
-        send_message(sender_id,
-            "გთხოვთ აირჩიეთ ქვემოთ ერთ-ერთი ვარიანტი 👇",
-            quick_replies=[
-                {"title": "🏠 ყიდვა", "payload": "BUY"},
-                {"title": "🔑 ქირა", "payload": "RENT"},
-                {"title": "💰 გირავნობა", "payload": "MORTGAGE"},
-                {"title": "📢 გაყიდვა", "payload": "SELL"}
-            ]
-        )
-
-@app.route('/webhook', methods=['GET', 'POST'])
+@app.route('/webhook', methods=['POST'])
 def webhook():
-    if request.method == 'GET':
-        if request.args.get('hub.verify_token') == VERIFY_TOKEN:
-            return request.args.get('hub.challenge')
-        return 'Verification failed', 403
-    if request.method == 'POST':
-        data = request.get_json()
+    data = request.get_json()
+    if data['object'] == 'page':
         for entry in data['entry']:
             for messaging_event in entry['messaging']:
                 sender_id = messaging_event['sender']['id']
-                if 'message' in messaging_event and 'text' in messaging_event['message']:
-                    handle_message(sender_id, messaging_event['message']['text'])
-                elif 'postback' in messaging_event:
-                    handle_message(sender_id, messaging_event['postback']['payload'])
-        return 'OK', 200
+                
+                if 'message' in messaging_event:
+                    handle_message(sender_id, messaging_event['message'])
+                if 'postback' in messaging_event:
+                    handle_postback(sender_id, messaging_event['postback'])
+    return "ok", 200
+
+def handle_message(sender_id, message):
+    text = message.get('text', '').lower().strip()
+    
+    if text == 'start' or text == 'დაწყება':
+        send_main_menu(sender_id)
+        return
+    
+    if text in LISTINGS: # თუ რეგიონია
+        region = text
+        action = user_state.get(sender_id, {}).get('action')
+        send_listings(sender_id, region, action)
+        return
+        
+    send_text(sender_id, "ვერ გავიგე 😅 დაწერეთ START ან გამოიყენეთ ღილაკები")
+
+def handle_postback(sender_id, postback):
+    payload = postback['payload']
+    
+    if payload == 'START':
+        user_state[sender_id] = {}
+        send_main_menu(sender_id)
+    
+    elif payload in ['BUY', 'RENT', 'MORTGAGE', 'SELL']:
+        action_map = {'BUY': 'ყიდვა', 'RENT': 'ქირა', 'MORTGAGE': 'გირავნობა', 'SELL': 'გაყიდვა'}
+        action = action_map[payload]
+        user_state[sender_id] = {'action': action}
+        send_regions(sender_id, action)
+
+def send_main_menu(sender_id):
+    message_data = {
+        "text": "გამარჯობა! 👋\nრა გსურთ?",
+        "quick_replies": [
+            {"content_type": "text", "title": "🏠 ყიდვა", "payload": "BUY"},
+            {"content_type": "text", "title": "🔑 ქირა", "payload": "RENT"},
+            {"content_type": "text", "title": "💰 გირავნობა", "payload": "MORTGAGE"},
+            {"content_type": "text", "title": "📢 გაყიდვა", "payload": "SELL"}
+        ]
+    }
+    call_send_api(sender_id, message_data)
+
+def send_regions(sender_id, action):
+    message_data = {
+        "text": f"შესანიშნავი! თქვენ აირჩიეთ: {action}\nახლა აირჩიეთ რეგიონი:",
+        "quick_replies": [
+            {"content_type": "text", "title": "თბილისი", "payload": "თბილისი"},
+            {"content_type": "text", "title": "ბათუმი", "payload": "ბათუმი"},
+            {"content_type": "text", "title": "ქუთაისი", "payload": "ქუთაისი"}
+        ]
+    }
+    call_send_api(sender_id, message_data)
+
+def send_listings(sender_id, region, action):
+    listings = LISTINGS.get(region, {}).get(action, ["ამ დროისთვის შეთავაზებები არ არის"])
+    text = f"🏡 {region} - {action}\n\n" + "\n\n".join(listings) + f"\n\n---\nდამატებითი შეთავაზებები:\nFacebook ჯგუფი: {GROUP_LINK}\nვებგვერდი: {WEBSITE_LINK}"
+    call_send_api(sender_id, {"text": text})
+    send_main_menu(sender_id) # 1წმ მერე დააბრუნე მენიუში
+
+def call_send_api(sender_id, message_data):
+    url = f"https://graph.facebook.com/v18.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
+    payload = {"recipient": {"id": sender_id}, "message": message_data}
+    requests.post(url, json=payload)
+
+def send_text(sender_id, text):
+    call_send_api(sender_id, {"text": text})
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(port=3000)
+    print("✅ BOT VERSION 3.2 LOADED - ქართული")
