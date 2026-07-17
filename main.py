@@ -1,3 +1,5 @@
+print("BOT VERSION 3.1 LOADED")
+
 from flask import Flask, request
 import requests
 import os
@@ -28,6 +30,7 @@ def send_message(recipient_id, text, quick_replies=None):
 
 def handle_message(sender_id, message_text):
     text = message_text.lower().strip()
+    print(f"Received: {text}") # ესაც დავამატეთ რომ ლოგში ვნახოთ რა მოდის
 
     if any(word in text for word in ["გამარჯობა", "hi", "start", "მთავარი"]):
         send_message(sender_id,
