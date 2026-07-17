@@ -3,15 +3,15 @@ import os
 import requests
 
 app = Flask(__name__)
-
 PAGE_ACCESS_TOKEN = os.environ.get('PAGE_ACCESS_TOKEN')
 VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN')
 
-# შენი ლინკები - მერე შეცვალე შენზე
+# შენი ლინკები
 GROUP_LINK = "https://www.facebook.com/groups/yourgroup"
 WEBSITE_LINK = "https://yourwebsite.ge"
 
 CITIES = ["თბილისი", "ბათუმი", "ქუთაისი", "რუსთავი", "ზუგდიდი"]
+
 LISTINGS = {
     "თბილისი": [
         {"title": "2 ოთახიანი ბინა ვაკეში", "price": "120,000 $", "link": WEBSITE_LINK + "/listing1"},
@@ -36,7 +36,6 @@ def send_buttons(sender_id, text, buttons):
 
 def handle_message(sender_id, message_text):
     text = message_text.lower()
-
     if text == "start":
         buttons = [
             {"type": "postback", "title": "🏠 ყიდვა", "payload": "BUY"},
@@ -49,7 +48,9 @@ def handle_message(sender_id, message_text):
         send_text(sender_id, "მენიუსთვის დაწერეთ START")
 
 def handle_postback(sender_id, payload):
-    if payload == "BUY":
+    if payload == "START" or payload == "GET_STARTED": # დავამატე GET_STARTED-იც
+        handle_message(sender_id, "start")
+    elif payload == "BUY":
         buttons = [{"type": "postback", "title": city, "payload": f"CITY_BUY_{city}"} for city in CITIES]
         send_buttons(sender_id, "აირჩიეთ ქალაქი:", buttons)
     elif payload == "RENT":
@@ -62,7 +63,7 @@ def handle_postback(sender_id, payload):
         city = payload.replace("CITY_BUY_", "")
         if city in LISTINGS:
             for item in LISTINGS[city]:
-                send_text(sender_id, f"{item['title']}\nფასი: {item['price']}\n{link: {item['link']}}")
+                send_text(sender_id, f"{item['title']}\nფასი: {item['price']}\n{item['link']}") # აქ ვასწორებ
         else:
             send_text(sender_id, "ამ ქალაქში ამჟამად განცხადებები არ არის")
 
@@ -72,7 +73,6 @@ def webhook():
         if request.args.get('hub.verify_token') == VERIFY_TOKEN:
             return request.args.get('hub.challenge')
         return 'Verification failed'
-
     if request.method == 'POST':
         data = request.get_json()
         for entry in data.get('entry', []):
@@ -84,15 +84,8 @@ def webhook():
                     handle_postback(sender_id, event['postback']['payload'])
         return 'ok', 200
 
-def setup_get_started():
-    url = f"https://graph.facebook.com/v18.0/me/messenger_profile?access_token={PAGE_ACCESS_TOKEN}"
-    payload = {
-        "get_started": {"payload": "START"},
-        "greeting": [{"locale": "default", "text": "გამარჯობა! Udzravi qonebis ofisi-ს ბოტი გესალმებათ 👋"}]
-    }
-    requests.post(url, json=payload)
-
-setup_get_started()
+# ეს ხაზი წავშალე აქედან: setup_get_started()
+# Get Started-ს ხელით ჩავრთავთ Graph Explorer-ით
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
